@@ -200,6 +200,7 @@ function spawnZombie() {
     size,
     speed: 1 + Math.random() * 0.5 + poziom
   });
+
 }
 
 setInterval(spawnZombie, 1000);
