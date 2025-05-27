@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Zombie Survival</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <h1>Zombie Survival</h1>
+  <button onclick="music()" id="wlacz">włącz muzykę</button>
+  <button onclick="nomusic()" id="wylacz" style="display: none;">wyłącz muzykę</button>
+  <div id="hud">
+    <span id="score">Zabici: 0</span>
+    <span id="health">Życie: 100</span>
+  </div>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div id="gameOver" class="hidden">
+    <h2>Koniec gry!</h2>
+    <button onclick="restartGame()">Zagraj ponownie</button>
+  </div>
+  <audio id="shootSound" src="sounds/shoot.wav"></audio>
+  <audio id="bgMusic" src="sounds/bg.mp3" preload="auto" loop></audio>
+  <script src="game.js"></script>
+</body>
+</html>

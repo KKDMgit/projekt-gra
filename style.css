@@ -1,0 +1,19 @@
+body {
+  text-align: center;
+  background: #222;
+  color: #fff;
+  font-family: sans-serif;
+}
+#hud {
+  margin-bottom: 10px;
+}
+canvas {
+  background: #333;
+  border: 2px solid #fff;
+}
+#gameOver {
+  margin-top: 20px;
+}
+.hidden {
+  display: none;
+}
