@@ -203,6 +203,7 @@ function spawnZombie() {
 
 }
 
+
 setInterval(spawnZombie, 1000);
 
 function endGame() {
