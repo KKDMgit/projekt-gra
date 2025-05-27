@@ -193,11 +193,12 @@ function spawnZombie() {
       y = canvas.height;
       break;
   }
+  let poziom = score / 10;
   zombies.push({
     x,
     y,
     size,
-    speed: 1 + Math.random() * 0.5
+    speed: 1 + Math.random() * 0.5 + poziom
   });
 }
 
