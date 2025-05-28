@@ -12,7 +12,10 @@ const bgMusic = document.getElementById('bgMusic');
 
 
 const zombieImage = new Image();
+const zombieImage2 = new Image();
 zombieImage.src = 'images/zombie.gif';
+zombieImage2.src = 'images/zombie2.png';
+
 
 // Start background music
 //bgMusic.volume = 1.0;
@@ -43,6 +46,7 @@ const player = {
 let score = 0;
 let bullets = [];
 let zombies = [];
+let zombies2 = [];
 let keys = {};
 let mouse = { x: 0, y: 0 };
 let gameRunning = true;
@@ -80,6 +84,7 @@ function restartGame() {
   player.health = 100;
   bullets = [];
   zombies = [];
+  zombies2 = [];
   score = 0;
   gameRunning = true;
   gameOverElement.classList.add('hidden');
@@ -102,10 +107,15 @@ function drawPlayer() {
 // Rysowanie zombie
 function drawZombies() {
     
+
   const zombieWidth = 60;
   const zombieHeight = 60;
+
   zombies.forEach(z => {
     ctx.drawImage(zombieImage, z.x - zombieWidth / 2, z.y - zombieHeight / 2, zombieWidth, zombieHeight);
+  });
+  zombies2.forEach(z => {
+    ctx.drawImage(zombieImage2, z.x - zombieWidth / 2, z.y - zombieHeight / 2, zombieWidth, zombieHeight);
   });
 }
 
@@ -145,6 +155,18 @@ function updateZombies() {
       if (player.health <= 0) endGame();
     }
   });
+  zombies2.forEach(z => {
+    const angle = Math.atan2(player.y - z.y, player.x - z.x);
+    z.x += Math.cos(angle) * z.speed;
+    z.y += Math.sin(angle) * z.speed;
+
+    // Sprawdzenie kolizji z graczem
+    const dist = Math.hypot(player.x - z.x, player.y - z.y);
+    if (dist < z.size + player.size / 2) {
+      player.health -= 0.5;
+      if (player.health <= 0) endGame();
+    }
+  });
 }
 
 // Ruch pocisków + kolizje
@@ -157,6 +179,14 @@ function updateBullets() {
       const dist = Math.hypot(b.x - z.x, b.y - z.y);
       if (dist < b.size + z.size) {
         zombies.splice(zi, 1);
+        bullets.splice(bi, 1);
+        score++;
+      }
+    });
+    zombies2.forEach((z, zi) => {
+      const dist = Math.hypot(b.x - z.x, b.y - z.y);
+      if (dist < b.size + z.size) {
+        zombies2.splice(zi, 1);
         bullets.splice(bi, 1);
         score++;
       }
@@ -193,18 +223,57 @@ function spawnZombie() {
       y = canvas.height;
       break;
   }
-  let poziom = score / 10;
+  
   zombies.push({
+    x,
+    y,
+    size,
+    speed: 1 + Math.random() * 0.5
+  });
+
+}
+
+function spawnZombie2() {
+  if (!gameRunning) return;
+  const size = 20;
+  let x, y;
+  const edge = Math.floor(Math.random() * 4);
+  switch (edge) {
+    case 0: // lewa
+      x = 0;
+      y = Math.random() * canvas.height;
+      break;
+    case 1: // prawa
+      x = canvas.width;
+      y = Math.random() * canvas.height;
+      break;
+    case 2: // góra
+      x = Math.random() * canvas.width;
+      y = 0;
+      break;
+    case 3: // dół
+      x = Math.random() * canvas.width;
+      y = canvas.height;
+      break;
+  }
+  let poziom = score / 10;
+
+  if(score > 10){
+  zombies2.push({
     x,
     y,
     size,
     speed: 1 + Math.random() * 0.5 + poziom
   });
-
+  }
 }
 
 
 setInterval(spawnZombie, 1000);
+
+setInterval(spawnZombie2, 1000);
+
+
 
 function endGame() {
   gameRunning = false;
