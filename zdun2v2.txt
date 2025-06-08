@@ -1,0 +1,543 @@
+1.WEB,API -> connection string appsettings.json
+--------------------------------------------------
+2.DataModel - Client.cs
+namespace Kolokwium.Model.DataModels;
+
+
+public class Client
+{
+
+    public int? Id { get; set; }
+    public DateTime RegistrationDate { get; set; }
+    public string FirstName { get; set; } = null!;
+    public string LastName { get; set; } = null!;
+    public string Email { get; set; } = null!;
+    public string Phone { get; set; } = null!;
+    public virtual ICollection<Order> Orders { get; set; } = null!;
+
+}
+--------------------------------------------------
+DataModel - Order.cs
+namespace Kolokwium.Model.DataModels;
+public class Order
+{
+    public int Id { get; set; }
+    public DateTime CreationDate { get; set; }
+    public string ShippingAdress { get; set; } = null!;
+    public string? Description { get; set; }
+    public string Status { get; set; } = null!;
+    public int TotalAmount { get; set; }
+    public DateTime DueDate { get; set; }
+    public int ClientId { get; set; }
+    public virtual Client Client { get; set; } = null!;
+
+}
+--------------------------------------------------
+3.VM - ClientVm.cs
+using Kolokwium.Model.DataModels;
+
+namespace Kolokwium.ViewModel.VM;
+public class ClientVm
+{
+    public int? Id{get;set;}
+    public DateTime RegistrationDate{get;set;}
+    public string FirstName{get;set;}=null!;
+    public string LastName{get;set;}=null!;
+    public string Email{get;set;}=null!;
+    public string Phone{get;set;}=null!;
+    public ICollection<OrderVm> Orders{get;set;}=null!;
+}
+--------------------------------------------------
+VM - OrderVm.cs
+namespace Kolokwium.ViewModel.VM;
+public class OrderVm
+{
+    public int Id{get;set;}
+    public DateTime CreationDate{get;set;}
+    public string ShippingAdress{get;set;}=null!;
+    public string? Description{get;set;}
+    public string Status{get;set;}=null!;
+    public int TotalAmount{get;set;}
+    public DateTime DueDate{get;set;}
+    public int ClientId{get;set;}
+    public ClientVm Client{get;set;}=null!;
+}
+--------------------------------------------------
+VM - EditClientVm.cs
+namespace Kolokwium.ViewModel.VM;
+public class EditClientVm
+{
+    public int? Id{get;set;}
+    public DateTime RegistrationDate{get;set;}
+    public string FirstName{get;set;}=null!;
+    public string LastName{get;set;}=null!;
+    public string Email{get;set;}=null!;
+    public string Phone{get;set;}=null!;
+}
+--------------------------------------------------
+VM - EditOrderVm.cs
+namespace Kolokwium.ViewModel.VM;
+public class EditOrderVm
+{
+    public int? Id{get;set;}
+    public DateTime CreationDate{get;set;}
+    public string ShippingAdress{get;set;}=null!;
+    public string? Description{get;set;}
+    public string Status{get;set;}=null!;
+    public int TotalAmount{get;set;}
+    public DateTime DueDate{get;set;}
+    public int ClientId{get;set;}
+    public ClientVm Client{get;set;}=null!;
+}
+--------------------------------------------------
+4.Services -> Interfaces - IClientService.cs
+using System.Linq.Expressions;
+using Kolokwium.Model.DataModels;
+using Kolokwium.ViewModel.VM;
+
+namespace Kolokwium.Services.Interfaces;
+public interface IClientService
+{
+    IEnumerable<ClientVm> GetClientVms(Expression<Func<Client,bool>>? predicate = null);
+    ClientVm GetClientVm(Expression<Func<Client,bool>> predicate);
+    Client Edit(EditClientVm EditClientVm);
+    void DeleteClient(int id);
+}
+--------------------------------------------------
+Services -> Interfaces - IOrderService.cs
+using System.Linq.Expressions;
+using Kolokwium.Model.DataModels;
+using Kolokwium.ViewModel.VM;
+
+namespace Kolokwium.Services.Interfaces;
+public interface IOrderService
+{
+    IEnumerable<OrderVm> GetOrderVms(Expression<Func<Order,bool>>? predicate = null);
+    OrderVm GetOrderVm(Expression<Func<Order,bool>> predicate);
+    Order Edit(EditOrderVm EditOrderVm);
+    void DeleteOrder(int id);
+}
+--------------------------------------------------
+5.ConcreteServices -> ClientService.cs
+using System.Linq.Expressions;
+using System.Security.Cryptography.X509Certificates;
+using AutoMapper;
+using Kolokwium.DAL;
+using Kolokwium.Model.DataModels;
+using Kolokwium.Services.Interfaces;
+using Kolokwium.ViewModel.VM;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging;
+
+namespace Kolokwium.Services.ConcreteServices;
+public class ClientService : BaseService, IClientService
+{
+    public ClientService(ApplicationDbContext dbContext, IMapper mapper, ILogger logger) : base(dbContext, mapper, logger)
+    {
+    }
+
+    public Client Edit(EditClientVm EditClientVm)
+    {
+        try
+        {
+            if(EditClientVm == null)
+                throw new Exception("Error");
+            var Client = Mapper.Map<Client>(EditClientVm);
+            if(!EditClientVm.Id.HasValue)
+            {
+                DbContext.Clients.Add(Client);
+                DbContext.SaveChanges();
+                return Client;
+            }
+            else
+            {
+                var oldClient = DbContext.Clients.Find(EditClientVm.Id);
+                if(oldClient == null)
+                    throw new Exception();
+                oldClient.RegistrationDate = Client.RegistrationDate;
+                oldClient.FirstName = Client.FirstName;
+                oldClient.LastName = Client.LastName;
+                oldClient.Email = Client.Email;
+                oldClient.Phone = Client.Phone;
+                DbContext.SaveChanges();
+                return oldClient;
+            }
+        }
+        catch(Exception e)
+        {
+            Logger.LogError(e,e.Message);
+            throw;
+        }
+    }
+
+    public void DeleteClient(int id)
+    {
+        try
+        {
+            var Client = DbContext.Clients.FirstOrDefault(x => x.Id == id);
+            if(Client == null)
+                throw new Exception();
+            DbContext.Clients.Remove(Client);
+            DbContext.SaveChanges();
+        }
+        catch(Exception e)
+        {
+            Logger.LogError(e,e.Message);
+        }
+    }
+
+    public ClientVm GetClientVm(Expression<Func<Client, bool>> predicate)
+    {
+        try
+        {
+            if(predicate == null)
+                throw new Exception();
+            var Client = DbContext.Clients.FirstOrDefault(predicate);
+            if(Client == null)
+                throw new Exception();
+            var ClientVm = Mapper.Map<ClientVm>(Client);
+            return ClientVm;
+        }
+        catch(Exception e)
+        {
+            Logger.LogError(e,e.Message);
+            throw;
+        }
+    }
+
+    public IEnumerable<ClientVm> GetClientVms(Expression<Func<Client, bool>>? predicate = null)
+    {
+        try
+        {
+            var Clients = DbContext.Clients.AsQueryable();
+            if(predicate != null)
+            {
+                Clients.Where(predicate);
+            }
+            var ClientsVm = Mapper.Map<IEnumerable<ClientVm>>(Clients);
+            return ClientsVm;
+        }
+        catch(Exception e)
+        {
+            Logger.LogError(e,e.Message);
+            throw;
+        }
+    }
+}
+--------------------------------------------------
+5.ConcreteServices -> OrderService.cs
+using System.Linq.Expressions;
+using System.Security.Cryptography.X509Certificates;
+using AutoMapper;
+using Kolokwium.DAL;
+using Kolokwium.Model.DataModels;
+using Kolokwium.Services.Interfaces;
+using Kolokwium.ViewModel.VM;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging;
+
+namespace Kolokwium.Services.ConcreteServices;
+public class OrderService : BaseService, IOrderService
+{
+    public OrderService(ApplicationDbContext dbContext, IMapper mapper, ILogger logger) : base(dbContext, mapper, logger)
+    {
+    }
+
+    public Order Edit(EditOrderVm EditOrderVm)
+    {
+        try
+        {
+            if(EditOrderVm == null)
+                throw new Exception("Error");
+            var Order = Mapper.Map<Order>(EditOrderVm);
+            if(!EditOrderVm.Id.HasValue)
+            {
+                DbContext.Orders.Add(Order);
+                DbContext.SaveChanges();
+                return Order;
+            }
+            else
+            {
+                var oldOrder = DbContext.Orders.Find(EditOrderVm.Id);
+                if(oldOrder == null)
+                    throw new Exception();
+                oldOrder.CreationDate = Order.CreationDate;
+                oldOrder.ShippingAdress = Order.ShippingAdress;
+                oldOrder.Description = Order.Description;
+                oldOrder.Status = Order.Status;
+                oldOrder.TotalAmount = Order.TotalAmount;
+                oldOrder.DueDate = Order.DueDate;
+                oldOrder.ClientId = Order.ClientId;
+                DbContext.SaveChanges();
+                return oldOrder;
+            }
+        }
+        catch(Exception e)
+        {
+            Logger.LogError(e,e.Message);
+            throw;
+        }
+    }
+
+    public void DeleteOrder(int id)
+    {
+        try
+        {
+            var Order = DbContext.Orders.FirstOrDefault(x => x.Id == id);
+            if(Order == null)
+                throw new Exception();
+            DbContext.Orders.Remove(Order);
+            DbContext.SaveChanges();
+        }
+        catch(Exception e)
+        {
+            Logger.LogError(e,e.Message);
+        }
+    }
+
+    public OrderVm GetOrderVm(Expression<Func<Order, bool>> predicate)
+    {
+        try
+        {
+            if(predicate == null)
+                throw new Exception();
+            var Order = DbContext.Orders.FirstOrDefault(predicate);
+            if(Order == null)
+                throw new Exception();
+            var OrderVm = Mapper.Map<OrderVm>(Order);
+            return OrderVm;
+        }
+        catch(Exception e)
+        {
+            Logger.LogError(e,e.Message);
+            throw;
+        }
+    }
+
+    public IEnumerable<OrderVm> GetOrderVms(Expression<Func<Order, bool>>? predicate = null)
+    {
+        try
+        {
+            var Orders = DbContext.Orders.AsQueryable();
+            if(predicate != null)
+            {
+                Orders.Where(predicate);
+            }
+            var OrdersVm = Mapper.Map<IEnumerable<OrderVm>>(Orders);
+            return OrdersVm;
+        }
+        catch(Exception e)
+        {
+            Logger.LogError(e,e.Message);
+            throw;
+        }
+    }
+}
+--------------------------------------------------
+6.DAL -> DbContext
+public virtual DbSet<Client> Clients {get; set;} = null!;
+public virtual DbSet<Order> Orders {get; set;} = null!;
+--------------------------------------------------
+7.Services -> Configuration -> MainProfile.cs
+CreateMap<Client, ClientVm>();
+CreateMap<EditClientVm, Client>();
+CreateMap<ClientVm, EditClientVm>();
+
+CreateMap<Order, OrderVm>();
+CreateMap<EditOrderVm, Order>();
+CreateMap<OrderVm, EditOrderVm>();
+--------------------------------------------------
+8.dotnet ef migrations add migrancja1 --project Kolokwium.DAL --startup-project Kolokwium.Web
+--------------------------------------------------
+9.dotnet ef database update --project Kolokwium.DAL --startup-project Kolokwium.Web
+--------------------------------------------------
+10.Web -> Controllers -> ClientController.cs
+using AutoMapper;
+using Kolokwium.Model.DataModels;
+using Kolokwium.Services.ConcreteServices;
+using Kolokwium.Services.Interfaces;
+using Kolokwium.ViewModel.VM;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
+
+namespace Kolokwium.Web.Controllers;
+public class ClientController : BaseController
+{
+    private readonly IClientService ClientService1;
+    public ClientController(ILogger logger, IMapper mapper, IStringLocalizer localizer, IClientService ClientService) : base(logger, mapper, localizer)
+    {
+        ClientService1 = ClientService;
+    }
+
+    public IActionResult Index()
+    {
+        var ClientsVm = ClientService1.GetClientVms();
+        return View(ClientsVm);
+    }
+
+    public IActionResult Edit(int? id = null)
+    {
+        if(id == null)
+            return View();
+        else
+        {
+            var Client = ClientService1.GetClientVm(x => x.Id == id);
+            var EditClientVm = Mapper.Map<EditClientVm>(Client);
+            return View(EditClientVm);
+        }
+    }
+
+    [HttpPost]
+    public IActionResult Edit(EditClientVm EditClientVm)
+    {
+        if(EditClientVm == null)
+            throw new Exception();
+        ClientService1.Edit(EditClientVm);
+        return RedirectToAction(nameof(Index));
+    }
+
+    public IActionResult DeleteClient(int id)
+    {
+        ClientService1.DeleteClient(id);
+        return RedirectToAction(nameof(Index));
+    }
+}
+--------------------------------------------------
+10.Web -> Controllers -> OrderController.cs
+using AutoMapper;
+using Kolokwium.Model.DataModels;
+using Kolokwium.Services.ConcreteServices;
+using Kolokwium.Services.Interfaces;
+using Kolokwium.ViewModel.VM;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
+
+namespace Kolokwium.Web.Controllers;
+public class OrderController : BaseController
+{
+    private readonly IOrderService OrderService1;
+    private readonly IClientService ClientService1;
+    public OrderController(ILogger logger, IMapper mapper, IStringLocalizer localizer, IOrderService OrderService,IClientService clientservice) : base(logger, mapper, localizer)
+    {
+        
+        OrderService1 = OrderService;
+        ClientService1=clientservice;
+    }
+
+    public IActionResult Index()
+    {
+        var OrdersVm = OrderService1.GetOrderVms();
+        return View(OrdersVm);
+    }
+
+    public IActionResult Edit(int? id = null)
+    {
+        var clients=ClientService1.GetClientVms();
+        ViewBag.Clients=clients;
+        if(id == null)
+            return View();
+        else
+        {
+            var Order = OrderService1.GetOrderVm(x => x.Id == id);
+            var EditOrderVm = Mapper.Map<EditOrderVm>(Order);
+            return View(EditOrderVm);
+        }
+    }
+
+    [HttpPost]
+    public IActionResult Edit(EditOrderVm EditOrderVm)
+    {
+        if(EditOrderVm == null)
+            throw new Exception();
+        OrderService1.Edit(EditOrderVm);
+        return RedirectToAction(nameof(Index));
+    }
+
+    public IActionResult DeleteOrder(int id)
+    {
+        OrderService1.DeleteOrder(id);
+        return RedirectToAction(nameof(Index));
+    }
+
+}
+--------------------------------------------------
+11.Web -> Program.cs
+builder.Services.AddTransient<IClientService, ClientService>();
+builder.Services.AddTransient<IOrderService,OrderService>();
+--------------------------------------------------
+12.dotnet aspnet-codegenerator view -p Kolokwium.Web Index List -m ClientVm -outDir Views/Client -scripts -udl
+--------------------------------------------------
+dotnet aspnet-codegenerator view -p Kolokwium.Web Index List -m OrderVm -outDir Views/Order -scripts -udl
+--------------------------------------------------
+13.Shared -> Layout
+--------------------------------------------------
+14.dotnet run --project Kolokwium.Web
+--------------------------------------------------
+15.dotnet aspnet-codegenerator view -p Kolokwium.Web Edit Create -m EditClientVm -outDir Views/Client -scripts -udl
+--------------------------------------------------
+dotnet aspnet-codegenerator view -p Kolokwium.Web Edit Create -m EditOrderVm -outDir Views/Order -scripts -udl
+--------------------------------------------------
+16.Web -> Views -> Client/Index
+Zmienić akcje
+@Html.ActionLink("Edit", "Edit", new {id = item.Id}) |
+@Html.ActionLink("Delete", "DeleteClient", new {id = item.Id})
+--------------------------------------------------
+Web -> Views -> Order/Index
+Zmienić akcje
+@Html.ActionLink("Edit", "Edit", new {id = item.Id}) |
+@Html.ActionLink("Delete", "DeleteOrder", new {id = item.Id})
+--------------------------------------------------
+17.Usunąć ID z Client/Edit.cshtml oraz z Order/Edit.cshtml
+--------------------------------------------------
+--------------------------------------------------
+--------------------------------------------------
+Special!!!!!
+--------------------------------------------------
+--------------------------------------------------
+--------------------------------------------------
+dla clienta
+gorna czesc z index(client)
+--------------------------------------------------
+<th>Zamówienia</th>
+--------------------------------------------------
+dolna czesc z index(client) - jeśli chcemy wyswietlac ilosc orderow
+--------------------------------------------------
+<td>
+    <p>@(item.Orders.Count())</p>
+</td>
+--------------------------------------------------
+dolna czesc z index(client) - jesli chcemy wyswietlac cos poprostu
+--------------------------------------------------
+<td>
+    @foreach(var items in item.Orders){
+        @Html.DisplayFor(modelItem => items.Description)
+    }
+</td>
+--------------------------------------------------
+--------------------------------------------------
+--------------------------------------------------
+jesli chodzi o id clienta gorna + dolna index(order)
+--------------------------------------------------
+@Html.DisplayNameFor(model => model.Client.Id)
+@Html.DisplayFor(modelItem => item.Client.Id)
+--------------------------------------------------
+--------------------------------------------------
+--------------------------------------------------
+--------------------------------------------------
+--------------------------------------------------
+--------------------------------------------------
+polecenia specjalne
+--------------------------------------------------
+1.dotnet tool install -g dotnet-aspnet-codegenerator
+2.dotnet ef database drop --project Kolokwium.DAL --startup-project Kolokwium.Web
+3. cd do web
+dotnet add package Microsoft.EntityFrameworkCore.SqlServer
+dotnet add package Microsoft.EntityFrameworkCore.Sqlite
+dotnet add package Microsoft.EntityFrameworkCore
+dotnet add package Microsoft.EntityFrameworkCore.Design
+dotnet add package Microsoft.EntityFrameworkCore.Tools
+--------------------------------------------------
+--------------------------------------------------
+--------------------------------------------------
+ctrl + h
+ctrl + .
